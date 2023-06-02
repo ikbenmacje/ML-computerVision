@@ -6,13 +6,14 @@
 
 import cv2
 import mediapipe as mp
+import time
 from pythonosc import udp_client
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 # Create OSC client
-OSCport = 1234
+OSCport = 6200
 OSCaddress = '127.0.0.1'
 client = udp_client.SimpleUDPClient(OSCaddress, OSCport) # local debug 
 
@@ -22,6 +23,7 @@ with mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5) as pose:
   while cap.isOpened():
+    ts = time.time()
     success, image = cap.read()
     if not success:
       print("Ignoring empty camera frame.")
@@ -36,23 +38,25 @@ with mp_pose.Pose(
 
     # check if we have landmarks
     # This if statement is not so relaible
-    if len(results.pose_landmarks.landmark) != 0:
+    if results.pose_landmarks and len(results.pose_landmarks.landmark):
+    #if len(results.pose_landmarks.landmark) != 0:
 
         # Each pose has 32 landmarks with normalized x/y/z/visiblilty
         poseCoords = []
         for id, lm in enumerate(results.pose_landmarks.landmark):
-            print(id,lm)
+            #print(id,lm)
             poseCoords.append(id)
             poseCoords.append(lm.x)
             poseCoords.append(lm.y)
             poseCoords.append(lm.z)
             poseCoords.append(lm.visibility)
 
+        timeEnd = time.time()
+        dur = timeEnd - ts
+        print(dur)
         # send over OSC
         client.send_message("/pose", poseCoords)
     
-
-    print("hgello")
 
     # Draw the pose annotation on the image.
     image.flags.writeable = True
